@@ -1,0 +1,55 @@
+---
+title: Get All Rivers
+description: Retrieve all available rivers
+---
+
+Retrieve a list of all available rivers and their data.
+
+## Endpoint
+```http
+GET /api/rivers
+```
+
+## Headers
+|
+ Header 
+|
+ Required 
+|
+ Description 
+|
+|
+--------
+|
+----------
+|
+-------------
+|
+|
+ x-api-key 
+|
+ Yes 
+|
+ Your API key 
+|
+
+## Response
+```json
+[
+  {
+    "id": "river-id",
+    "title": "River Angren",
+    "description": null,
+    "files": [
+      {
+        "fileName": "1.png",
+        "fileUrl": "https://storage.url/snow-cover.png"
+      },
+      {
+        "fileName": "2.jpeg",
+        "fileUrl": "https://storage.url/dynamics.jpeg"
+      }
+    ]
+  }
+]
+```

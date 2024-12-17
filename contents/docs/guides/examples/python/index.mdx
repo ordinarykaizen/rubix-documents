@@ -1,0 +1,23 @@
+---
+title: Python Example
+description: Using the API with Python
+---
+
+## Using Requests
+```python
+import requests
+
+API_KEY = 'your-api-key'
+
+def get_all_rivers():
+    headers = {
+        'x-api-key': API_KEY
+    }
+    
+    response = requests.get(
+        'https://modsnow-api.onrender.com/api/rivers',
+        headers=headers
+    )
+    
+    return response.json()
+```

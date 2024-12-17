@@ -1,0 +1,26 @@
+---
+title: Rate Limiting Best Practices
+description: How to handle rate limits effectively
+---
+
+## Monitoring Usage
+- Track your request count
+- Watch rate limit headers
+- Implement usage alerts
+
+## Implementation Tips
+```javascript
+function checkRateLimit(response) {
+  const remaining = response.headers.get('X-RateLimit-Remaining');
+  const reset = response.headers.get('X-RateLimit-Reset');
+  
+  if (remaining < 10) {
+    console.warn(`Rate limit warning: ${remaining} requests remaining`);
+  }
+}
+```
+
+## Handling Rate Limits
+1. Implement exponential backoff
+2. Cache responses when possible
+3. Optimize request patterns

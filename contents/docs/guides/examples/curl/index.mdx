@@ -1,0 +1,22 @@
+---
+title: cURL Examples
+description: Using the API with cURL
+---
+
+## Get All Rivers
+```bash
+curl -X GET 'https://modsnow-api.onrender.com/api/rivers' \
+  -H 'x-api-key: your-api-key'
+```
+
+## Get Specific River
+```bash
+curl -X GET 'https://modsnow-api.onrender.com/api/rivers/angren' \
+  -H 'x-api-key: your-api-key'
+```
+
+## Get Snow Cover Data
+```bash
+curl -X GET 'https://modsnow-api.onrender.com/api/rivers/angren/files/snow-cover' \
+  -H 'x-api-key: your-api-key'
+```

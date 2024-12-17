@@ -1,0 +1,30 @@
+---
+title: JavaScript Example
+description: Using the API with JavaScript
+---
+
+## Using Fetch API
+```javascript
+const API_KEY = 'your-api-key';
+
+async function getAllRivers() {
+  const response = await fetch('https://modsnow-api.onrender.com/api/rivers', {
+    headers: {
+      'x-api-key': API_KEY
+    }
+  });
+  
+  const data = await response.json();
+  return data;
+}
+```
+
+## Error Handling
+```javascript
+try {
+  const rivers = await getAllRivers();
+  console.log(rivers);
+} catch (error) {
+  console.error('Error:', error);
+}
+```

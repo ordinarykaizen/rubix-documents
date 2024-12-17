@@ -1,0 +1,29 @@
+---
+title: Snow Cover Area
+description: Access snow cover area measurements
+---
+
+Access snow cover area measurements for rivers.
+
+## Endpoint
+```http
+GET /api/rivers/{riverId}/files/snow-cover
+```
+
+## Response Format
+```json
+{
+  "fileName": "1.png",
+  "fileUrl": "https://storage.url/snow-cover.png",
+  "metadata": {
+    "date": "2024-12-17",
+    "coverage": "75%"
+  }
+}
+```
+
+## Usage Examples
+```bash
+curl -X GET 'https://modsnow-api.onrender.com/api/rivers/angren/files/snow-cover' \
+  -H 'x-api-key: your-api-key'
+```

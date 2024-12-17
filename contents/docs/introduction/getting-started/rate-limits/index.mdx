@@ -1,0 +1,18 @@
+---
+title: Rate Limits
+description: Understanding API rate limits
+---
+
+
+Our API implements rate limiting to ensure fair usage.
+
+## Default Limits
+- 1000 requests per day
+- 100 requests per 15 minutes
+
+## Response Headers
+```
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1640995200
+```

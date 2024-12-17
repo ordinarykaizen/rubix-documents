@@ -1,0 +1,49 @@
+---
+title: Get Specific River
+description: Retrieve data for a specific river
+---
+
+Retrieve detailed information about a specific river.
+
+## Endpoint
+```http
+GET /api/rivers/{riverName}
+```
+
+## Parameters
+|
+ Parameter 
+|
+ Type 
+|
+ Description 
+|
+|
+-----------
+|
+------
+|
+-------------
+|
+|
+ riverName 
+|
+ string 
+|
+ Name of the river 
+|
+
+## Response
+```json
+{
+  "id": "river-id",
+  "title": "River Angren",
+  "description": null,
+  "files": [
+    {
+      "fileName": "1.png",
+      "fileUrl": "https://storage.url/snow-cover.png"
+    }
+  ]
+}
+```

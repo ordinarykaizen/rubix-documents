@@ -1,0 +1,22 @@
+---
+title: Authentication
+description: Learn about API authentication
+---
+All API requests require authentication using an API key.
+
+## API Key Header
+```bash
+x-api-key: your-api-key
+```
+
+## Example Request
+```bash
+curl -X GET 'https://modsnow-api.onrender.com/api/rivers' \
+  -H 'x-api-key: your-api-key'
+```
+
+## Security Guidelines
+- Keep your API key secure
+- Don't expose it in client-side code
+- Use environment variables
+- Rotate keys if compromised

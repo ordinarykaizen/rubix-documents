@@ -1,6 +1,5 @@
 import path from "path";
 import { createReadStream, promises as fs } from "fs";
-
 import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism-plus";
@@ -14,6 +13,29 @@ import { PageRoutes } from "@/lib/pageroutes";
 import { components } from '@/lib/components'; 
 import { Settings } from "@/lib/meta";
 import { GitHubLink } from "@/settings/navigation";
+
+// Constants
+const headingsRegex = /^(#{2,4})\s(.+)$/gm;
+
+function normalizeSlug(slug: string): string {
+  // Remove leading/trailing slashes and handle empty strings
+  if (!slug) return '';
+  
+  const cleanSlug = slug.replace(/^\/+|\/+$/g, '');
+  if (!cleanSlug) return '';
+  
+  // Split and filter out empty segments
+  const segments = cleanSlug.split('/').filter(Boolean);
+  const uniqueSegments = segments.reduce((acc: string[], segment) => {
+    // Only add if different from last segment
+    if (!acc.length || acc[acc.length - 1] !== segment) {
+      acc.push(segment);
+    }
+    return acc;
+  }, []);
+  
+  return uniqueSegments.join('/');
+}
 
 async function parseMdx<Frontmatter>(rawMdx: string) {
   return await compileMDX<Frontmatter>({
@@ -43,19 +65,26 @@ type BaseMdxFrontmatter = {
   keywords: string;
 };
 
-const computeDocumentPath = (slug: string) => {
+function getDocumentPath(slug: string): string {
+  const normalized = normalizeSlug(slug);
+  if (!normalized) {
+    throw new Error('Invalid slug provided');
+  }
+  
   return Settings.gitload
-    ? `${GitHubLink.href}/raw/main/contents/docs/${slug}/index.mdx`
-    : path.join(process.cwd(), "/contents/docs/", `${slug}/index.mdx`);
-};
+    ? `${GitHubLink.href}/raw/main/contents/docs/${normalized}/index.mdx`
+    : path.join(process.cwd(), "contents/docs", normalized, "index.mdx");
+}
 
+// Memoized version of getDocumentPath
 const getDocumentPathMemoized = (() => {
   const cache = new Map<string, string>();
-  return (slug: string) => {
-    if (!cache.has(slug)) {
-      cache.set(slug, computeDocumentPath(slug));
+  return (slug: string): string => {
+    const normalized = normalizeSlug(slug);
+    if (!cache.has(normalized)) {
+      cache.set(normalized, getDocumentPath(normalized));
     }
-    return cache.get(slug)!;
+    return cache.get(normalized)!;
   };
 })();
 
@@ -88,19 +117,20 @@ export async function getDocument(slug: string) {
       lastUpdated,
     };
   } catch (err) {
-    console.error(err);
+    console.error(`Error processing document for slug: ${slug}`, err);
     return null;
   }
 }
-
-const headingsRegex = /^(#{2,4})\s(.+)$/gm;
 
 export async function getTable(slug: string): Promise<Array<{ level: number; text: string; href: string }>> {
   const extractedHeadings: Array<{ level: number; text: string; href: string }> = [];
   let rawMdx = "";
 
+  const normalized = normalizeSlug(slug);
+  if (!normalized) return [];
+  
   if (Settings.gitload) {
-    const contentPath = `${GitHubLink.href}/raw/main/contents/docs/${slug}/index.mdx`;
+    const contentPath = `${GitHubLink.href}/raw/main/contents/docs/${normalized}/index.mdx`;
     try {
       const response = await fetch(contentPath);
       if (!response.ok) {
@@ -108,18 +138,18 @@ export async function getTable(slug: string): Promise<Array<{ level: number; tex
       }
       rawMdx = await response.text();
     } catch (error) {
-      console.error("Error fetching content from GitHub:", error);
+      console.error(`Error fetching content from GitHub for slug: ${slug}`, error);
       return [];
     }
   } else {
-    const contentPath = path.join(process.cwd(), "/contents/docs/", `${slug}/index.mdx`);
+    const contentPath = path.join(process.cwd(), "contents/docs", normalized, "index.mdx");
     try {
       const stream = createReadStream(contentPath, { encoding: 'utf-8' });
       for await (const chunk of stream) {
         rawMdx += chunk;
       }
     } catch (error) {
-      console.error("Error reading local file:", error);
+      console.error(`Error reading local file for slug: ${slug}`, error);
       return [];
     }
   }
@@ -129,8 +159,8 @@ export async function getTable(slug: string): Promise<Array<{ level: number; tex
     const level = match[1].length;
     const text = match[2].trim();
     extractedHeadings.push({
-      level: level,
-      text: text,
+      level,
+      text,
       href: `#${innerslug(text)}`,
     });
   }
@@ -138,14 +168,21 @@ export async function getTable(slug: string): Promise<Array<{ level: number; tex
   return extractedHeadings;
 }
 
-function innerslug(text: string) {
+function innerslug(text: string): string {
   return text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
-const pathIndexMap = new Map(PageRoutes.map((route, index) => [route.href, index]));
+// Initialize path map with normalized paths
+const pathIndexMap = new Map(
+  PageRoutes.map((route, index) => [
+    normalizeSlug(route.href),
+    index
+  ])
+);
 
 export function getPreviousNext(path: string) {
-  const index = pathIndexMap.get(`/${path}`);
+  const normalized = normalizeSlug(path);
+  const index = pathIndexMap.get(normalized);
 
   if (index === undefined || index === -1) {
     return { prev: null, next: null };

@@ -1,0 +1,24 @@
+---
+title: Snow Dynamics
+description: Access snow cover dynamics data
+---
+
+Access dynamic snow cover measurements.
+
+## Endpoint
+```http
+GET /api/rivers/{riverId}/files/dynamics
+```
+
+## Response Format
+```json
+{
+  "fileName": "2.jpeg",
+  "fileUrl": "https://storage.url/dynamics.jpeg",
+  "metadata": {
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-17",
+    "interval": "daily"
+  }
+}
+```
