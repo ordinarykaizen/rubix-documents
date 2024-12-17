@@ -1,189 +1,123 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { LuCommand, LuFileText, LuSearch } from "react-icons/lu";
-
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTrigger,
-  DialogClose,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useCallback, useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Documents } from "@/settings/documents";
 
-import Anchor from "./anchor";
-import { advanceSearch, cn, debounce, highlight, search } from "@/lib/utils";
-import { Documents } from '@/settings/documents';
+type DocItem = {
+  title: string;
+  href: string;
+  heading?: string;
+  items?: readonly DocItem[];
+  noLink?: boolean;
+};
 
-export default function Search() {
-  const [searchedInput, setSearchedInput] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const [filteredResults, setFilteredResults] = useState<search[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+type Spacer = {
+  spacer: true;
+};
 
-  const debouncedSearch = useMemo(
-    () =>
-      debounce((input) => {
-        setIsLoading(true);
-        const results = advanceSearch(input.trim());
-        setFilteredResults(results);
-        setIsLoading(false);
-      }, 200),
-    []
-  );
+type DocNode = DocItem | Spacer;
+
+const SearchDialog = () => {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === "k") {
-        event.preventDefault();
-        setIsOpen(true);
-      }
-
-      if (isOpen && event.key === "Enter" && filteredResults.length > 2) {
-        const selected = filteredResults[0];
-        if ("href" in selected) {
-          window.location.href = `/docs${selected.href}`;
-          setIsOpen(false);
-        }
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, filteredResults]);
+  const handleSelect = useCallback((href: string) => {
+    router.push(href);
+    setOpen(false);
+  }, [router]);
 
-  useEffect(() => {
-    if (searchedInput.length >= 3) {
-      debouncedSearch(searchedInput);
-    } else {
-      setFilteredResults([]);
-    }
-  }, [searchedInput, debouncedSearch]);
+  const isDocItem = (node: DocNode): node is DocItem => {
+    return 'title' in node && 'href' in node;
+  };
 
-  function renderDocuments(documents: any[], parentHref: string = "/docs"): React.ReactNode[] {
-    if (!documents || !Array.isArray(documents)) {
-      return [];
-    }
-
-    return documents.flatMap((doc) => {
-      if ('spacer' in doc && doc.spacer) {
-        return [];
+  const renderDocuments = useCallback((documents: readonly DocNode[]) => {
+    return documents.map((doc, index) => {
+      if (!isDocItem(doc)) {
+        return null;
       }
 
-      const href = `${parentHref}${doc.href}`;
+      const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const hasMatchingChildren = doc.items?.some(item => 
+        isDocItem(item) && item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
-      return [
-        <DialogClose key={href} asChild>
-          <Anchor
-            className={cn(
-              "w-full px-3 flex items-center gap-2.5 text-[15px] rounded-sm hover:bg-neutral-100 dark:hover:bg-neutral-900"
-            )}
-            href={href}
-          >
-            <div className="flex items-center h-full w-fit gap-1.5 py-3 whitespace-nowrap">
-              <LuFileText className="h-[1.1rem] w-[1.1rem]" /> {doc.title}
+      if (!matchesSearch && !hasMatchingChildren) {
+        return null;
+      }
+
+      return (
+        <div key={index} className="flex flex-col gap-2">
+          {doc.heading && (
+            <h4 className="font-medium text-sm leading-none mb-2">{doc.heading}</h4>
+          )}
+          {!doc.noLink && (
+            <Button
+              variant="ghost"
+              className="justify-start h-auto p-2"
+              onClick={() => handleSelect(doc.href)}
+            >
+              <span className="text-sm">{doc.title}</span>
+            </Button>
+          )}
+          {doc.items && (
+            <div className="ml-4 flex flex-col gap-1">
+              {renderDocuments(doc.items)}
             </div>
-          </Anchor>
-        </DialogClose>,
-        ...renderDocuments(doc.items || [], `${href}`)
-      ];
+          )}
+        </div>
+      );
     });
-  }
+  }, [handleSelect, searchTerm]);
 
   return (
-    <div>
-      <Dialog
-        open={isOpen}
-        onOpenChange={(open) => {
-          setIsOpen(open);
-          if (!open) {
-            setTimeout(() => setSearchedInput(""), 200);
-          }
-        }}
-      >
-        <DialogTrigger asChild>
-          <div className="relative flex-1 max-w-md cursor-pointer">
-            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
-            <Input
-              className="h-9 w-full pl-10 pr-4 rounded-md border bg-muted shadow-sm md:w-full"
-              placeholder="Search documents..."
-              type="search"
-            />
-            <div className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 text-xs font-mono font-medium dark:bg-neutral-700 sm:flex">
-              <LuCommand className="w-3 h-3" />
-              <span>k</span>
-            </div>
-          </div>
-        </DialogTrigger>
-        <DialogContent className="max-w-[650px] p-0 top-[45%] sm:top-[38%]">
-          <DialogTitle className="sr-only">Search</DialogTitle>
-          <DialogHeader>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="mr-2 px-2 w-full justify-start"
+        >
+          <Search className="mr-2 h-4 w-4" />
+          <span className="text-sm text-muted-foreground">Search...</span>
+          <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="top-[20%] translate-y-0">
+        <div className="flex flex-col gap-4 max-h-[60vh]">
+          <div className="flex-1 overflow-hidden">
             <input
-              value={searchedInput}
-              onChange={(e) => setSearchedInput(e.target.value)}
-              placeholder="Search documents..."
-              autoFocus
-              className="h-14 px-4 bg-transparent border-b text-[15px] outline-none"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Type to search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </DialogHeader>
-          {searchedInput.length > 0 && searchedInput.length < 3 && (
-            <p className="mx-auto mt-2 text-sm text-warning">
-              Please enter at least 3 characters.
-            </p>
-          )}
-          {isLoading ? (
-            <p className="mx-auto mt-2 text-sm text-muted-foreground">
-              Searching...
-            </p>
-          ) : (
-            filteredResults.length === 0 && searchedInput.length >= 3 && (
-              <p className="mx-auto mt-2 text-sm text-muted-foreground">
-                No results found for{" "}
-                <span className="text-primary">{`"${searchedInput}"`}</span>
-              </p>
-            )
-          )}
-          <ScrollArea className="max-h-[350px]">
-            <div className="flex flex-col items-start overflow-y-auto px-1 pt-1 pb-4 sm:px-3">
-            {searchedInput
-                ? filteredResults.map((item, index) => {
-                  if ("href" in item) {
-                    return (
-                      <DialogClose key={item.href} asChild>
-                        <Anchor
-                          className={cn(
-                            "w-full p-3 flex flex-col gap-0.5 text-[15px] rounded-sm hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                          )}
-                          href={`/docs${item.href}`}
-                        >
-                          <div className="flex items-center h-full w-fit gap-x-2">
-                            <LuFileText className="h-[1.1rem] w-[1.1rem]" /> {item.title}
-                          </div>
-                          {"snippet" in item && item.snippet && (
-                            <p
-                              className="w-full truncate text-xs text-neutral-500 dark:text-neutral-400"
-                              dangerouslySetInnerHTML={{
-                                __html: highlight(item.snippet, searchedInput),
-                              }}
-                            />
-                          )}
-                        </Anchor>
-                      </DialogClose>
-                    );
-                  }
-                  return null;
-                })
-              : renderDocuments(Documents)}
+          </div>
+          <ScrollArea className="flex-1 max-h-[50vh]">
+            <div className="flex flex-col gap-2">
+              {searchTerm.length === 0 ? null : renderDocuments(Documents)}
             </div>
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
-}
+};
+
+export default SearchDialog;
